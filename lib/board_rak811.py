@@ -1,17 +1,15 @@
 from machine import UART, Pin
 from lib.error import RAK811TimeoutError
+import time
 
 class BoardRAK811UART():
-
-    # Last line read from UART, used to stop reading and return response
-    GET_CONFIG_RESPONSE = 'DownLinkCounter'
+    
     OK_RESPONSE = 'OK '
     ACK_RESPONSE = 'at+recv'
-    RESTART_RESPONSE = 'Initialization OK'
 
     # Timeout for response from UART
-    # RAK811 response time is normally less than 1.5 seconds (ms)
-    RESPONSE_TIMEOUT = 8000
+    # RAK811 response time is normally less than 1.5 seconds 
+    RESPONSE_TIMEOUT = 5000 # (ms)
     # A command ends with <CR><LF> i.e \r\n
     CRLF = '\r\n'
 
@@ -19,33 +17,34 @@ class BoardRAK811UART():
     BAUDRATE = 115200
 
     def __init__(self, port=PORT, baudrate=BAUDRATE, response_timeout=RESPONSE_TIMEOUT):
-	    self.uart = UART(port, baudrate, timeout=response_timeout)
-            self.led = Pin(25, Pin.OUT)
+        self.uart = UART(port, baudrate, timeout=response_timeout)
 
     
     def send_command(self, command):
         """
         Send AT command to the module. at+ and the <CR><LF> (i.e \r\n) are appended to the command
-        in this function.
+        in this function. Wait 0.2 seconds to ensure the sent command been transferred before asking for the response.
         """
         self.uart.write('at+{}{}'.format(command, self.CRLF))
+        time.sleep(0.5)
     
-    def get_response(self, stop_response, list_response=False):
+    def get_response(self, list_response=False):
         """
         Receive response from the RAK811 module, if response not received in time
         the RAK811TimeoutError will be raised.
         When expected response consist of more than one line, list_response must be set to True
         If an error accurse, that error code will be returned
-        """	
+        """ 
         response = ''
         error = False
         try:
             if not list_response:
-                while not response.startswith(stop_response):
+                while self.uart.any() > 0:
                     data = self.uart.readline()
                     if data is not None:
                         response = data.decode('ascii')
                         response = response.rstrip(self.CRLF)
+                        print(response)
                         if response.startswith('ERROR'):
                             error = True
                             break
@@ -53,11 +52,12 @@ class BoardRAK811UART():
                         raise RAK811TimeoutError('Response timeout', response)
             else:
                 response_list = []
-                while not response.startswith(stop_response):
+                while self.uart.any() > 0:
                     data = self.uart.readline()
                     if data is not None:
                         response = data.decode('ascii')
                         response = response.rstrip(self.CRLF)
+                        print(response)
                         if response.startswith('ERROR'):
                             error = True
                             break
@@ -69,20 +69,44 @@ class BoardRAK811UART():
         except RAK811TimeoutError:
             pass
         return response
+    
+    def get_custom_response(self, stop):
+        response = ''
+        try:
+            while not response.startswith(stop):
+                data = self.uart.readline()
+                if data is not None:
+                    response = data.decode('ascii')
+                    response = response.rstrip(self.CRLF)
+                    if response.startswith('ERROR'):
+                            break
+        except RAK811TimeoutError:
+            response = 'Timeout error'
+        return response
+    
+    def join_response(self):
+        return self.get_custom_response(self.OK_RESPONSE)
 
     def get_downlink_response(self):
-        response = self.get_response(self.ACK_RESPONSE)
+        response = self.get_custom_response(self.OK_RESPONSE)
+        if response == self.OK_RESPONSE:
+            response = self.get_response()
         return response
+        
 
     def get_lora_config(self):
         config_dict = {}
-        self.send_command('get_config=lora:status')
-        response = self.get_response(self.GET_CONFIG_RESPONSE, True)
+        response = ''
+        # After deepsleep RAK811 always returns the ( ERROR 5 : 'There is an error when sending data through the UART port' ) once.
+        while type(response) is str: 
+            self.send_command('get_config=lora:status')
+            response = self.get_response(True)
 
         for setting in response:
             k_v = setting.split(':')
             config_dict[k_v[0]] = k_v[1].strip()
-        
+            if k_v[0] == 'Joined Network': # Ugly solution to a UART problem, must investigate further
+                break
         return config_dict
     
     def _reset_lora(self):
@@ -90,7 +114,7 @@ class BoardRAK811UART():
         Reset RAK811 LoraWAN config
         '''
         self.send_command('set_config=lora:default_parameters')
-        print(self.get_response(self.OK_RESPONSE))
+        print(self.get_response())
     
     def _reset_device(self):
         '''
@@ -98,7 +122,7 @@ class BoardRAK811UART():
         Return True if no Error
         '''
         self.send_command('set_config=device:restart')
-        response_list = self.get_response(self.RESTART_RESPONSE, True)
+        response_list = self.get_response(True)
         if isinstance(response_list, list):
             print('Board reset')
             for response in response_list: [print(response)]
@@ -121,15 +145,4 @@ class BoardRAK811UART():
                 1 sleep
         '''
         self.send_command('set_config=device:sleep:{}'.format(status))
-        print(self.get_response(self.OK_RESPONSE))
-
-    def led(self, status):
-        '''
-        Pico's on-board led, 1=on, 0=off
-        '''
-        self.led(status)
-    
-
-
-
-        
+        print(self.get_response())
