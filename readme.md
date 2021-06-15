@@ -11,4 +11,4 @@ The default setting is connected to UART0 on the pico, and the UART response tim
 
 Using just MicroPython, the pico is not a suitable MCU to use in an IoT device with a LoRaWAN connection. However, if the sleep modes provided in the [pico-playground](https://github.com/raspberrypi/pico-playground/tree/master/sleep) are integrated, the pico can achieve sleep mode current down to 0.8mA with the dormant mode and 1.3mA with the sleep mode. If the Saft LS14500 battery is used with a battery capacity of 2600mAh, the pico can achieve an estimated battery lifetime of 2.1 months in sleep mode.
 
-Implementation on the [Firebeetle ESP32](https://github.com/makjohansson/Pico_LoRaWAN)
+Implementation on the [Firebeetle ESP32](https://github.com/makjohansson/FireBeetleESP32_LoRaWAN)
