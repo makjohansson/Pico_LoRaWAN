@@ -5,7 +5,7 @@ Set the **DevEUI**, **AppEUI**, and **AppKey**  in `config.py`
 
 For AT commands, error codes, and RAK811 information, see the [RAK811 Breakout Board AT Command Manual.](https://docs.rakwireless.com/Product-Categories/WisDuo/RAK811-Breakout-Board/AT-Command-Manual/#introduction)
 
-The default setting is connected to UART0 on the pico, and the UART response timeout is set to 5 seconds. 
+The default setting is connected to UART1 on the pico, and the UART response timeout is set to 5 seconds. 
 
 ![alt text](img/Pico_RAK811_conn.png)
 

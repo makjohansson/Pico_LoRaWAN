@@ -1,4 +1,4 @@
-from machine import UART, Pin
+from machine import UART
 from lib.error import RAK811TimeoutError
 import time
 
@@ -13,7 +13,7 @@ class BoardRAK811UART():
     # A command ends with <CR><LF> i.e \r\n
     CRLF = '\r\n'
 
-    PORT = 0
+    PORT = 1
     BAUDRATE = 115200
 
     def __init__(self, port=PORT, baudrate=BAUDRATE, response_timeout=RESPONSE_TIMEOUT):
